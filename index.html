@@ -1,11 +1,6 @@
 <!DOCTYPE html>
 <html lang="ar" dir="rtl">
 <head>
-    <meta name="theme-color" content="#5D5CDE">
-<link rel="manifest" href="./manifest.webmanifest">
-<meta name="apple-mobile-web-app-capable" content="yes">
-<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-<link rel="apple-touch-icon" href="./icon-192.png">
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>تطبيق الموهوبين</title>
@@ -112,6 +107,20 @@
                 margin-bottom: 20px !important;
             }
             
+            /* ضمان ظهور الشعارات في الطباعة */
+            img {
+                max-height: 60px !important;
+                max-width: 60px !important;
+                width: auto !important;
+                height: auto !important;
+                object-fit: contain !important;
+                -webkit-print-color-adjust: exact !important;
+                print-color-adjust: exact !important;
+                opacity: 1 !important;
+                visibility: visible !important;
+                display: block !important;
+            }
+            
             /* تحسين العناوين */
             h1, h2, h3 {
                 margin: 5px 0 !important;
@@ -173,22 +182,10 @@
             <div class="bg-white dark:bg-gray-800 rounded-lg shadow-md p-6 mb-6">
                 <h2 class="text-xl font-bold text-primary mb-4">إعدادات المدرسة</h2>
                 
-                <div class="grid md:grid-cols-2 gap-6">
+                <div class="max-w-md">
                     <div>
                         <label class="block text-sm font-medium mb-2">اسم المدرسة</label>
                         <input type="text" id="schoolName" class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-primary bg-white dark:bg-gray-700 text-base">
-                    </div>
-                    
-                    <div>
-                        <label class="block text-sm font-medium mb-2">شعار المدرسة</label>
-                        <input type="file" id="schoolLogo" accept="image/*" class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-primary bg-white dark:bg-gray-700 text-base">
-                        <div id="schoolLogoPreview" class="mt-2"></div>
-                    </div>
-                    
-                    <div>
-                        <label class="block text-sm font-medium mb-2">شعار الوزارة</label>
-                        <input type="file" id="ministryLogo" accept="image/*" class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-primary bg-white dark:bg-gray-700 text-base">
-                        <div id="ministryLogoPreview" class="mt-2"></div>
                     </div>
                 </div>
                 
@@ -444,8 +441,6 @@
         // Settings functionality
         const saveSettings = () => {
             const schoolName = document.getElementById('schoolName').value;
-            const schoolLogoFile = document.getElementById('schoolLogo').files[0];
-            const ministryLogoFile = document.getElementById('ministryLogo').files[0];
             
             const transaction = db.transaction(['settings'], 'readwrite');
             const store = transaction.objectStore('settings');
@@ -453,26 +448,6 @@
             // Save school name
             if (schoolName) {
                 store.put({ key: 'schoolName', value: schoolName });
-            }
-            
-            // Save school logo
-            if (schoolLogoFile) {
-                const reader = new FileReader();
-                reader.onload = (e) => {
-                    store.put({ key: 'schoolLogo', value: e.target.result });
-                    displayLogoPreview('schoolLogoPreview', e.target.result);
-                };
-                reader.readAsDataURL(schoolLogoFile);
-            }
-            
-            // Save ministry logo
-            if (ministryLogoFile) {
-                const reader = new FileReader();
-                reader.onload = (e) => {
-                    store.put({ key: 'ministryLogo', value: e.target.result });
-                    displayLogoPreview('ministryLogoPreview', e.target.result);
-                };
-                reader.readAsDataURL(ministryLogoFile);
             }
             
             showNotification('تم حفظ الإعدادات بنجاح', 'success');
@@ -488,20 +463,6 @@
                     document.getElementById('schoolName').value = event.target.result.value;
                 }
             };
-            
-            // Load school logo
-            store.get('schoolLogo').onsuccess = (event) => {
-                if (event.target.result) {
-                    displayLogoPreview('schoolLogoPreview', event.target.result.value);
-                }
-            };
-            
-            // Load ministry logo
-            store.get('ministryLogo').onsuccess = (event) => {
-                if (event.target.result) {
-                    displayLogoPreview('ministryLogoPreview', event.target.result.value);
-                }
-            };
         };
 
         const clearSettings = () => {
@@ -509,16 +470,10 @@
                 const transaction = db.transaction(['settings'], 'readwrite');
                 const store = transaction.objectStore('settings');
                 
-                ['schoolName', 'schoolLogo', 'ministryLogo'].forEach(key => {
-                    store.delete(key);
-                });
+                store.delete('schoolName');
                 
                 // Clear form
                 document.getElementById('schoolName').value = '';
-                document.getElementById('schoolLogo').value = '';
-                document.getElementById('ministryLogo').value = '';
-                document.getElementById('schoolLogoPreview').innerHTML = '';
-                document.getElementById('ministryLogoPreview').innerHTML = '';
                 
                 showNotification('تم حذف الإعدادات بنجاح', 'success');
             })) {}
@@ -738,14 +693,10 @@
             const currentDate = new Date().toLocaleDateString('ar-SA');
             
             const headerLogos = `
-                <div class="flex justify-between items-center mb-6">
-                    ${schoolLogo ? `<img src="${schoolLogo}" class="h-20 object-contain">` : '<div class="w-20"></div>'}
-                    <div class="text-center flex-1">
-                        <h1 class="text-2xl font-bold text-primary mb-2">المملكة العربية السعودية</h1>
-                        <h2 class="text-xl font-semibold mb-1">وزارة التعليم</h2>
-                        ${schoolName ? `<h3 class="text-lg font-medium">${schoolName}</h3>` : ''}
-                    </div>
-                    ${ministryLogo ? `<img src="${ministryLogo}" class="h-20 object-contain">` : '<div class="w-20"></div>'}
+                <div class="text-center mb-6" style="text-align: center; margin-bottom: 24px;">
+                    <h1 class="text-2xl font-bold text-primary mb-2" style="font-size: 24px; font-weight: bold; color: #5D5CDE; margin-bottom: 8px;">المملكة العربية السعودية</h1>
+                    <h2 class="text-xl font-semibold mb-1" style="font-size: 20px; font-weight: 600; margin-bottom: 4px;">وزارة التعليم</h2>
+                    ${schoolName ? `<h3 class="text-lg font-medium" style="font-size: 18px; font-weight: 500;">${schoolName}</h3>` : ''}
                 </div>
             `;
             
@@ -956,34 +907,5 @@
             document.getElementById('printReport').addEventListener('click', printReport);
         });
     </script>
-<script>
-if ('serviceWorker' in navigator) {
-    window.addEventListener('load', () => {
-        navigator.serviceWorker.register('./service-worker.js')
-        .catch(err => console.warn('SW registration failed', err));
-    });
-}
-let deferredPrompt;
-window.addEventListener('beforeinstallprompt', (e) => {
-  e.preventDefault();
-  deferredPrompt = e;
-  const btn = document.getElementById('installPWAButton');
-  if (btn) btn.classList.remove('hidden');
-});
-async function installPWA() {
-  if (deferredPrompt) {
-    deferredPrompt.prompt();
-    await deferredPrompt.userChoice;
-    deferredPrompt = null;
-    const btn = document.getElementById('installPWAButton');
-    if (btn) btn.classList.add('hidden');
-  }
-}
-</script>
-<button id="installPWAButton"
-        onclick="installPWA()"
-        class="hidden fixed bottom-4 left-4 z-50 bg-primary text-white px-4 py-2 rounded-xl shadow-lg">
-    تثبيت التطبيق
-</button>
 </body>
 </html>
